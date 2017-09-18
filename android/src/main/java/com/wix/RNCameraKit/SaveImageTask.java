@@ -85,7 +85,9 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
             return null;
         }
 
-        WritableMap imageInfo = saveToCameraRoll ? saveToMediaStore(image) : saveTempImageFile(image);
+        // TODO: remove saveToMediaStore
+        // WritableMap imageInfo = saveToCameraRoll ? saveToMediaStore(image) : saveTempImageFile(image);
+        WritableMap imageInfo = saveTempImageFile(image);
         if (imageInfo == null)
             promise.reject("CameraKit", "failed to save image to MediaStore");
         else {
@@ -104,27 +106,6 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
         imageInfo.putInt("width", width);
         imageInfo.putInt("height", height);
         return imageInfo;
-    }
-
-    private WritableMap saveToMediaStore(Bitmap image) {
-        try {
-            String fileUri = MediaStore.Images.Media.insertImage(context.getContentResolver(), image, System.currentTimeMillis() + "", "");
-            Cursor cursor = context.getContentResolver().query(Uri.parse(fileUri), new String[]{
-                    MediaStore.Images.ImageColumns.DATA,
-                    MediaStore.Images.ImageColumns.DISPLAY_NAME
-            }, null, null, null);
-            cursor.moveToFirst();
-            int pathIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATA);
-            int nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DISPLAY_NAME);
-            String filePath = cursor.getString(pathIndex);
-            String fileName = cursor.getString(nameIndex);
-            long fileSize = new File(filePath).length();
-            cursor.close();
-
-            return createImageInfo(filePath, filePath, fileName, fileSize, image.getWidth(), image.getHeight());
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     private Bitmap decodeAndRotateIfNeeded(byte[] rawImageData) {
@@ -212,16 +193,69 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
         return metadata;
     }
 
+    private WritableMap saveToMediaStore(Bitmap image) {
+        try {
+            String fileUri = MediaStore.Images.Media.insertImage(context.getContentResolver(), image, System.currentTimeMillis() + "", "");
+            Cursor cursor = context.getContentResolver().query(Uri.parse(fileUri), new String[]{
+                    MediaStore.Images.ImageColumns.DATA,
+                    MediaStore.Images.ImageColumns.DISPLAY_NAME
+            }, null, null, null);
+            cursor.moveToFirst();
+            int pathIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATA);
+            int nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DISPLAY_NAME);
+            String filePath = cursor.getString(pathIndex);
+            String fileName = cursor.getString(nameIndex);
+            long fileSize = new File(filePath).length();
+            cursor.close();
+
+            return createImageInfo(filePath, filePath, fileName, fileSize, image.getWidth(), image.getHeight());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // TODO: Misleading Method name
     @Nullable
     private WritableMap saveTempImageFile(Bitmap image) {
+        // Changed to save To SMala directory on Mobile device
+        String NOMEDIA=".nomedia";
         File imageFile;
         FileOutputStream outputStream;
+        File storageDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Smala");
 
-        Long tsLong = System.currentTimeMillis()/1000;
-        String fileName = "temp_Image_" + tsLong.toString() + ".jpg";
+        if (!storageDirectory.exists()) {
+            if (!storageDir.mkdirs()) {
+                Log.e(TAG, "failed to create directory:" + storageDir.getAbsolutePath());
+                return null;
+            } else {
+                // Folder created Successfully, Create nomedia file entry
+                File noMediaFile = new File(storageDir + "/" + NOMEDIA);
+                if (!noMediaFile.exists()) {
+                    try {
+                        boolean newFile = noMediaFile.createNewFile();
+                        Log.i(TAG, ".no media File creation: " + newFile);
+                    } catch (IOException e) {
+                        Log.e(TAG, "failed to create File:" + e.toString());
+                    }
+                }
+            }
+        } else {
+            File noMediaFile = new File(storageDir + "/" + NOMEDIA);
+            if (!noMediaFile.exists()) {
+                try {
+                    boolean newFile = noMediaFile.createNewFile();
+                    Log.i(TAG, ".no media File creation: " + newFile);
+                } catch (IOException e) {
+                    Log.e(TAG, "failed to create File:" + e.toString());
+                }
+            }
+        }
+
+        String fileName = String.format("%s", new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()));
+        fileName = String.format("IMG_%s.jpg", fileName);
 
         try {
-            imageFile = new File(context.getCacheDir(), fileName);
+            imageFile = new File(storageDirectory, fileName);
             if (imageFile.exists()) {
                 imageFile.delete();
             }
@@ -235,3 +269,4 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
         return (imageFile != null) ? createImageInfo(Uri.fromFile(imageFile).toString(), imageFile.getAbsolutePath(), fileName, imageFile.length(), image.getWidth(), image.getHeight()) : null;
     }
 }
+
