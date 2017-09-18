@@ -8,6 +8,7 @@ import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -28,6 +29,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import static com.facebook.react.common.ReactConstants.TAG;
 
@@ -224,12 +227,12 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
         File storageDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Smala");
 
         if (!storageDirectory.exists()) {
-            if (!storageDir.mkdirs()) {
-                Log.e(TAG, "failed to create directory:" + storageDir.getAbsolutePath());
+            if (!storageDirectory.mkdirs()) {
+                Log.e(TAG, "failed to create directory:" + storageDirectory.getAbsolutePath());
                 return null;
             } else {
                 // Folder created Successfully, Create nomedia file entry
-                File noMediaFile = new File(storageDir + "/" + NOMEDIA);
+                File noMediaFile = new File(storageDirectory + "/" + NOMEDIA);
                 if (!noMediaFile.exists()) {
                     try {
                         boolean newFile = noMediaFile.createNewFile();
@@ -240,7 +243,7 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
                 }
             }
         } else {
-            File noMediaFile = new File(storageDir + "/" + NOMEDIA);
+            File noMediaFile = new File(storageDirectory + "/" + NOMEDIA);
             if (!noMediaFile.exists()) {
                 try {
                     boolean newFile = noMediaFile.createNewFile();
@@ -269,4 +272,5 @@ public class SaveImageTask extends AsyncTask<byte[], Void, Void> {
         return (imageFile != null) ? createImageInfo(Uri.fromFile(imageFile).toString(), imageFile.getAbsolutePath(), fileName, imageFile.length(), image.getWidth(), image.getHeight()) : null;
     }
 }
+
 
